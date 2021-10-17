@@ -1,6 +1,19 @@
 **Purpose:** Single file, single click installer of linux apps for any distro.
 #
 **NO THIS DOES NOT WORK YET**
+
+## Todos
+- ~~Safely check tables and values exist~~
+- Create spec for .ulai 
+- Map data from toml struct to normal internal data struct
+- - Distro info inheritance in the .ulai file with overrides
+- Detect user distro and match to a set of package mangers
+- Handle dependencies
+- - handle 32 bit dependencies
+- Handle installation
+- Handle installation errors or complications
+- Handle updates
+- ~~Separate validation command for authors~~
 #
 A lot of normal people who don't regularly use linux find it overly complicated to install apps because of there's different installation steps for different distros and versions of distros.
 ####
