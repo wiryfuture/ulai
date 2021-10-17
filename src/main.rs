@@ -6,10 +6,23 @@ use std::fs::read_to_string;
 
 // Arguments for ulai
 #[derive(StructOpt, Clone)]
-struct Arguments {
-    #[structopt(short, long, parse(from_os_str), help="Path of the ulai file for the app that will be installed.")]
+struct Opt {
+    #[structopt(short, long, parse(from_os_str), help="path of the ulai file for the app that will be installed")]
     // Directory of ulai file to use
-    ulai: PathBuf
+    ulai: PathBuf,
+    #[structopt(subcommand)]
+    // Ulai commands
+    cmd: Commands,
+}
+// Subcommands for ulai
+#[derive(StructOpt, Clone, PartialEq)]
+#[structopt(name = "ulai", about = "distro-universal linux app installer")]
+enum Commands {
+    #[structopt(name = "validate", about = "validate if a ulai config can be parsed")]
+    Validate,
+
+    #[structopt(name = "install", about="install an app using a ulai config")]
+    Install,
 }
 
 // I don't understand what this does after the value parse so it go into its own function 
@@ -91,7 +104,7 @@ fn sanity_ulai(path: PathBuf) -> bool {
 }
 
 // Sanity check arguments that have been passed
-fn argparse(args: Arguments) -> bool {
+fn argparse(args: Opt) -> bool {
     // Run checks for each argument that is passed
     let sane_ulai = sanity_ulai(args.ulai);
     // Did all checks pass?
@@ -103,11 +116,14 @@ fn argparse(args: Arguments) -> bool {
 }
 
 fn main() {
-    let args = Arguments::from_args();
+    let args = Opt::from_args();
     let arg_sanity = argparse(args.clone());
-
-    //println!("Directory of ulai file to use: {}", args.ulai.into_os_string().into_string().unwrap());
-    println!("Sanity check passed: {}", arg_sanity);
+    
+    // End program if running validate command
+    if args.cmd == Commands::Validate {
+        println!("Sanity check passed: {}", arg_sanity);
+        return
+    }
 }
 
 // TODO: 
