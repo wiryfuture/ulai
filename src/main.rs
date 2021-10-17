@@ -2,8 +2,7 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 use toml::{Value};
 use toml::map::Map;
-use std::io::prelude::*;
-use std::fs::File;
+use std::fs::read_to_string;
 
 // Arguments for ulai
 #[derive(StructOpt, Clone)]
@@ -24,6 +23,7 @@ fn parse_toml_struct_from_string(file: &String) -> toml::map::Map<std::string::S
 }
 
 // Check table X exists and contains key Y
+/*
 fn sanity_has_table_x_has_key_y(contents: &toml::map::Map<std::string::String, toml::Value>, table: &str, key: &str) -> bool {
     // Check toml structure contains table x at current level with key y
     if contents.contains_key(table) && contents[table].is_table() {
@@ -34,7 +34,7 @@ fn sanity_has_table_x_has_key_y(contents: &toml::map::Map<std::string::String, t
     }
     // Table x not found
     false
-}
+}*/
 
 // Check that this table (or sets of tables) exist within the toml struct
 fn nth_dimension_is_table(toml: &toml::map::Map<std::string::String, toml::Value>, list_of_table_indexes: Vec<&str>) -> bool {
@@ -68,7 +68,6 @@ fn nth_dimension_is_value(toml: &toml::map::Map<std::string::String, toml::Value
         }
         // check key exists // Then check key is not a table
         if botmost_table.contains_key(value_index) & !botmost_table[value_index].is_table() {
-            println!("Key value of {}: {}", value_index, botmost_table[value_index]);
             return true
         }
         else {
@@ -85,22 +84,15 @@ fn sanity_ulai(path: PathBuf) -> bool {
     // Check that ulai path exists
     if PathBuf::from(&path).exists() {
         // Parse ulai file as one long string
-        let mut file = File::open(path).expect("Could not open ulai file");
-        let mut ulai = String::new();
-        file.read_to_string(&mut ulai).expect("Could not read ulai file");
+        //let mut file = File::open(path).expect("Could not open ulai file");
+        let ulai = read_to_string(path).expect("Could not read ulai file");
         // Parse the long string as a toml struct 
         let toml: toml::map::Map<std::string::String, toml::Value>  = parse_toml_struct_from_string(&ulai);
-        let fedora_34_dependencies_exist: bool = nth_dimension_is_table_stringin(&toml, "Distros.Fedora.34.Dependencies");
-        let fedora_34_linux_value_exists: bool = nth_dimension_is_value(&toml, "Distros.Fedora.34.Dependencies.linux");
-        println!("Fedora 34 dependencies: {}", fedora_34_dependencies_exist);
-        println!("Fedora 34 linux dependencies: {}", fedora_34_linux_value_exists);
-        let has_pkgname: bool = sanity_has_table_x_has_key_y(&toml, "Metadata", "pkgname");
-        let has_fedora34: bool = sanity_has_table_x_has_key_y(&toml, "Distros.Fedora", "34");
-        //println!("toml file:\n{:?}", toml);
-        println!("Package name: {}", toml["Metadata"].as_table().unwrap()["pkgname"]);
-        if has_pkgname & has_fedora34 {
-            
-            println!("Fedora 34: {}", toml["Distros"]["Fedora"]["34"]);
+        // Check these pretty important values exist in the ulai (no distro specific stuff here, except maybe flatpak or snap checks)
+        let has_pkg_name: bool = nth_dimension_is_value(&toml, "Metadata.pkg_name"); // Make sure packagename is included
+        let has_distros: bool = nth_dimension_is_table_stringin(&toml, "Distros"); // Make sure there's a distro section at all
+        let has_ulai_target: bool = nth_dimension_is_value(&toml, "Metadata.ulai_target"); // Make sure we have a targeted ulai version
+        if has_pkg_name & has_distros & has_ulai_target {
             true
         }
         else {
