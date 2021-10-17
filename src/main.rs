@@ -22,20 +22,6 @@ fn parse_toml_struct_from_string(file: &String) -> toml::map::Map<std::string::S
     }).unwrap_or(Map::new())
 }
 
-// Check table X exists and contains key Y
-/*
-fn sanity_has_table_x_has_key_y(contents: &toml::map::Map<std::string::String, toml::Value>, table: &str, key: &str) -> bool {
-    // Check toml structure contains table x at current level with key y
-    if contents.contains_key(table) && contents[table].is_table() {
-        // Create map from the table that's inside the table... what? 
-        let content_table = contents[table].as_table().unwrap();
-        // return true if table x contains key y
-        return content_table.contains_key(key)
-    }
-    // Table x not found
-    false
-}*/
-
 // Check that this table (or sets of tables) exist within the toml struct
 fn nth_dimension_is_table(toml: &toml::map::Map<std::string::String, toml::Value>, list_of_table_indexes: Vec<&str>) -> bool {
     let mut current_table_layer = toml;
