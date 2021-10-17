@@ -127,7 +127,9 @@ fn main() {
 }
 
 // TODO: 
-// - Create spec for .ulai files
+// - Create spec for .ulai 
+// - Map data from toml struct to normal internal data struct
+// - - Distro info inheritance in the .ulai file with overrides
 // - Detect user distro and match to a set of package mangers
 // - Handle dependencies
 // - - 32 bit dependencies
