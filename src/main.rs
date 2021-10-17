@@ -16,7 +16,7 @@ struct Arguments {
 // I don't understand what this does after the value parse so it go into its own function 
 // https://stackoverflow.com/a/57947338
 // what??
-fn parse_toml_struct_from_string(file: String) -> toml::map::Map<std::string::String, toml::Value> {
+fn parse_toml_struct_from_string(file: &String) -> toml::map::Map<std::string::String, toml::Value> {
     file.parse::<Value>().ok().and_then(|r| match r {
         Value::Table(table) => Some(table),
         _ => None
@@ -24,16 +24,60 @@ fn parse_toml_struct_from_string(file: String) -> toml::map::Map<std::string::St
 }
 
 // Check table X exists and contains key Y
-fn sanity_has_table_x_has_key_y(contents: &toml::map::Map<std::string::String, toml::Value>, x: &str, y: &str) -> bool {
+fn sanity_has_table_x_has_key_y(contents: &toml::map::Map<std::string::String, toml::Value>, table: &str, key: &str) -> bool {
     // Check toml structure contains table x at current level with key y
-    if contents.contains_key(x) && contents[x].is_table() {
+    if contents.contains_key(table) && contents[table].is_table() {
         // Create map from the table that's inside the table... what? 
-        let content_table = contents[x].as_table().unwrap();
+        let content_table = contents[table].as_table().unwrap();
         // return true if table x contains key y
-        return content_table.contains_key(y)
+        return content_table.contains_key(key)
     }
     // Table x not found
     false
+}
+
+// Check that this table (or sets of tables) exist within the toml struct
+fn nth_dimension_is_table(toml: &toml::map::Map<std::string::String, toml::Value>, list_of_table_indexes: Vec<&str>) -> bool {
+    let mut current_table_layer = toml;
+    for element in list_of_table_indexes {
+        if current_table_layer.contains_key(element) & current_table_layer[element].is_table() {
+            current_table_layer = current_table_layer[element].as_table().unwrap();
+            //println!("There is a table called {} in this toml", element);
+        }
+        else {
+            return false
+        }
+    }
+    true
+}
+// Wrapper for function above that splits the indexes passed as a vector for you
+fn nth_dimension_is_table_stringin(toml: &toml::map::Map<std::string::String, toml::Value>, table_indexes: &str) -> bool {
+    nth_dimension_is_table(toml, table_indexes.split(".").collect::<Vec<&str>>())
+}
+
+// Takes a set of indexes and confirms whether a value is there (NOT A TABLE!) by iterating through each table and then the value itself
+fn nth_dimension_is_value(toml: &toml::map::Map<std::string::String, toml::Value>, x: &str) -> bool {
+    let mut list_of_indexes: Vec<&str> = x.split(".").collect::<Vec<&str>>();
+    let value_index: &str = list_of_indexes.pop().unwrap();
+    let tables_are_valid: bool = nth_dimension_is_table(toml, list_of_indexes.clone()); // check tables leading up to the value index exist
+    if tables_are_valid {
+        // Get bottom table by iterating through all of them. pain.
+        let mut botmost_table: &toml::map::Map<std::string::String, toml::Value> = toml;
+        for table in list_of_indexes {
+            botmost_table = botmost_table[table].as_table().unwrap();
+        }
+        // check key exists // Then check key is not a table
+        if botmost_table.contains_key(value_index) & !botmost_table[value_index].is_table() {
+            println!("Key value of {}: {}", value_index, botmost_table[value_index]);
+            return true
+        }
+        else {
+            return false
+        }
+    }
+    else {
+        return false
+    }
 }
 
 // Validate ulai file
@@ -45,11 +89,18 @@ fn sanity_ulai(path: PathBuf) -> bool {
         let mut ulai = String::new();
         file.read_to_string(&mut ulai).expect("Could not read ulai file");
         // Parse the long string as a toml struct 
-        let toml: toml::map::Map<std::string::String, toml::Value>  = parse_toml_struct_from_string(ulai);
+        let toml: toml::map::Map<std::string::String, toml::Value>  = parse_toml_struct_from_string(&ulai);
+        let fedora_34_dependencies_exist: bool = nth_dimension_is_table_stringin(&toml, "Distros.Fedora.34.Dependencies");
+        let fedora_34_linux_value_exists: bool = nth_dimension_is_value(&toml, "Distros.Fedora.34.Dependencies.linux");
+        println!("Fedora 34 dependencies: {}", fedora_34_dependencies_exist);
+        println!("Fedora 34 linux dependencies: {}", fedora_34_linux_value_exists);
         let has_pkgname: bool = sanity_has_table_x_has_key_y(&toml, "Metadata", "pkgname");
-        println!("Package name provided: {}", has_pkgname);
-        if has_pkgname {
-            println!("Package name: {}", toml["Metadata"]["pkgname"]);
+        let has_fedora34: bool = sanity_has_table_x_has_key_y(&toml, "Distros.Fedora", "34");
+        //println!("toml file:\n{:?}", toml);
+        println!("Package name: {}", toml["Metadata"].as_table().unwrap()["pkgname"]);
+        if has_pkgname & has_fedora34 {
+            
+            println!("Fedora 34: {}", toml["Distros"]["Fedora"]["34"]);
             true
         }
         else {
@@ -80,3 +131,12 @@ fn main() {
     //println!("Directory of ulai file to use: {}", args.ulai.into_os_string().into_string().unwrap());
     println!("Sanity check passed: {}", arg_sanity);
 }
+
+// TODO: 
+// - Create spec for .ulai files
+// - Detect user distro and match to a set of package mangers
+// - Handle dependencies
+// - - 32 bit dependencies
+// - Handle installation
+// - Handle installation errors or complications
+// - Handle updates
